@@ -50,24 +50,25 @@ let
       regex-compat
       syb
       split
+      strict-concurrency
     ])
   );
 
 in
 stdenv.mkDerivation rec {
   pname = "bluespec";
-  version = "2024.07";
+  version = "2026.07.1";
 
   src = fetchFromGitHub {
     owner = "B-Lang-org";
     repo = "bsc";
     tag = version;
-    sha256 = "sha256-gA/vfAkkM2cuArN99JZVYEWTIJqg82HlC+BHNVS5Ot0=";
+    sha256 = "sha256-Pq5hECWEDCcqdNpP1Y+fgveEn06pcQXX8YNHQQejblI=";
   };
 
   yices-src = fetchurl {
     url = "https://github.com/B-Lang-org/bsc/releases/download/${version}/yices-src-for-bsc-${version}.tar.gz";
-    sha256 = "sha256-pyEdCJvmgwOYPMZEtw7aro76tSn/Y/2GcKTyARmIh4E=";
+    sha256 = "sha256-pRFMjx4Ep1oGWYrJdjki+RhlVLbxMmwUVLLgber9VXU=";
   };
 
   enableParallelBuilding = true;
@@ -81,7 +82,7 @@ stdenv.mkDerivation rec {
 
   # https://github.com/B-Lang-org/bsc/pull/278 is still applicable, but will probably not be applied as such
   # there is work ongoing: https://github.com/B-Lang-org/bsc/issues/595 https://github.com/B-Lang-org/bsc/pull/600
-  patches = [ ./libstp_stub_makefile.patch ];
+  # patches = [ ./libstp_stub_makefile.patch ];
 
   postUnpack = ''
     tar -C $sourceRoot/ -xf ${yices-src}
@@ -137,12 +138,9 @@ stdenv.mkDerivation rec {
   '';
 
   preBuild = ''
-    # allow running bsc to bootstrap
-    export LD_LIBRARY_PATH=$PWD/inst/lib/SAT
-
     # use more cores for GHC building, 44 causes heap overflows in ghc, and
     # there is not much speedup after 8..
-    if [[ $NIX_BUILD_CORES -gt 8 ]] ; then export GHCJOBS=8; else export GHCJOBS=$NIX_BUILD_CORES; fi
+    if [[ $NIX_BUILD_CORES -gt 8 ]]; then export GHCJOBS=8; else export GHCJOBS=$NIX_BUILD_CORES; fi
   '';
 
   buildInputs = yices.buildInputs ++ [
@@ -190,8 +188,6 @@ stdenv.mkDerivation rec {
     };
 
   makeFlags = [
-    "NO_DEPS_CHECKS=1" # skip the subrepo check (this deriviation uses yices-src instead of the subrepo)
-    "NOGIT=1" # https://github.com/B-Lang-org/bsc/issues/12
     "LDCONFIG=ldconfig" # https://github.com/SRI-CSL/yices2/blob/fda0a325ea7923f152ea9f9a5d20eddfd1d96224/Makefile.build#L66
     (if withDocs then "release" else "install-src")
   ]
